@@ -361,14 +361,14 @@ class NoiseInjection(nn.Module):
 
         self.weight = nn.Parameter(torch.zeros(1))
 
-    def forward(self, image, noise=None):
+    def forward(self, image, gain=None, noise=None):
         if noise is None:
             print('?')
             batch, _, height, width = image.shape
             noise = image.new_empty(batch, 1, height, width).normal_()
 
-        print(torch.mean(noise))
-        return image + self.weight * noise
+        print(gain)
+        return image + self.weight * gain * noise
 
 
 class ConstantInput(nn.Module):
@@ -412,9 +412,9 @@ class StyledConv(nn.Module):
         # self.activate = ScaledLeakyReLU(0.2)
         self.activate = FusedLeakyReLU(out_channel)
 
-    def forward(self, input, style, noise=None, ab=None, act=None, ct=None):
+    def forward(self, input, style, gain_ct, noise=None, ab=None, act=None, ct=None, gain=None):
         out = self.conv(input, style)
-        out = self.noise(out, noise=noise)
+        out = self.noise(out, gain=gain[gain_ct], noise=noise)
         # out = out + self.bias
         if act[ct] == 0:
             return sinFunc(out, ab[0][ct], ab[1][ct])
@@ -574,7 +574,8 @@ class Generator(nn.Module):
         randomize_noise=True,
         ab=[[],[]],
         idx=[],
-        act=[]
+        act=[],
+        gain=[]
     ):
 
         if not input_is_latent:
@@ -624,7 +625,8 @@ class Generator(nn.Module):
         out = self.input(latent)
 
         # print("Conv1")
-        out = self.conv1(out, latent[:, 0], noise=noise[0], ab=ab, act=act, ct=8)
+        gain_ct = 0
+        out = self.conv1(out, latent[:, 0], gain_ct, noise=noise[0], ab=ab, act=act, ct=8, gain=gain)
 
         # print("RGB1")
         skip = self.to_rgb1(out, latent[:, 1])
@@ -635,12 +637,13 @@ class Generator(nn.Module):
         for conv1, conv2, noise1, noise2, to_rgb in zip(
             self.convs[::2], self.convs[1::2], noise[1::2], noise[2::2], self.to_rgbs
         ):
-            out = conv1(out, latent[:, i], noise=noise1, ab=ab, act=act, ct= ct_ + 1)
-            out = conv2(out, latent[:, i + 1], noise=noise2, ab=ab, act=act, ct= ct_ + 2)
+            out = conv1(out, latent[:, i], gain_ct+1, noise=noise1, ab=ab, act=act, ct= ct_ + 1, gain=gain)
+            out = conv2(out, latent[:, i + 1], gain_ct+2, noise=noise2, ab=ab, act=act, ct= ct_ + 2, gain=gain)
             skip = to_rgb(out, latent[:, i + 2], skip)
 
             i += 2
             ct_ += 2
+            gain_ct += 2
 
         image = skip
 

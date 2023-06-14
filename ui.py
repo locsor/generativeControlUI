@@ -1,4 +1,4 @@
-def generate(g_ema, device, mean_latent, noise, a, b, idxs, act, random_seed=1):
+def generate(g_ema, device, mean_latent, noise, a, b, idxs, act, gain, random_seed=1):
     
     sample = 1
     pics = 1
@@ -13,7 +13,7 @@ def generate(g_ema, device, mean_latent, noise, a, b, idxs, act, random_seed=1):
             
             sample, _ = g_ema(
                 [sample_z], truncation=truncation, truncation_latent=mean_latent,
-                ab=[a,b], idx=idxs, act=act, noise = noise
+                ab=[a,b], idx=idxs, act=act, noise = noise, gain = gain
             )
         
         if pics == 1:
@@ -94,10 +94,11 @@ def update_viz(a, b, window, plot, fig, update_plot):
     
     return window, plot, fig
 
-def gen_rand(w, h, w1, h1):
-    a = torch.zeros((w, h))
-    noise = a.new_empty((w, h)).normal_().numpy()
-    noise_img = cv2.resize(np.uint8(255 * (noise - np.min(noise)) / (np.max(noise) - np.min(noise))), (w1, h1), interpolation = cv2.INTER_NEAREST)
+def gen_rand(sz, w, h, w1, h1):
+    a = torch.zeros((sz, sz))
+    noise = a.new_empty((sz, sz)).normal_().numpy()
+    # noise = noise[]
+    noise_img = cv2.resize(np.uint8(255 * (noise - np.min(noise)) / (np.max(noise) - np.min(noise))), (1024, 1024), interpolation = cv2.INTER_NEAREST)
     return noise, noise_img
 
 def set_noise(noise, layer, window, img_draw, area):
@@ -113,28 +114,22 @@ def set_noise(noise, layer, window, img_draw, area):
     if area:
         window['graph'].delete_figure(area)
 
-def noise_window(noise, noise_torch, noise_params):
+    return noise_temp
+
+def noise_window(noise, noise_torch, noise_params, gain, interaction_seq_mem):
     graph=sg.Graph(canvas_size=(1024,1024), graph_bottom_left=(0, 0), graph_top_right=(1024,1024),
     background_color='red', enable_events=True, drag_submits=True, key='graph')
 
-    layer_colum = [[sg.Button('Randomize', key = 'R')],
-                    [sg.Button('Noise Injection 1', key = 'N1')],
-                    [sg.Button('Noise Injection 2', key = 'N2')],
-                    [sg.Button('Noise Injection 3', key = 'N3')],
-                    [sg.Button('Noise Injection 4', key = 'N4')],
-                    [sg.Button('Noise Injection 5', key = 'N5')],
-                    [sg.Button('Noise Injection 6', key = 'N6')],
-                    [sg.Button('Noise Injection 7', key = 'N7')],
-                    [sg.Button('Noise Injection 8', key = 'N8')],
-                    [sg.Button('Noise Injection 9', key = 'N9')],
-                    [sg.Button('Noise Injection 10', key = 'N10')],
-                    [sg.Button('Noise Injection 11', key = 'N11')],
-                    [sg.Button('Noise Injection 12', key = 'N12')],
-                    [sg.Button('Noise Injection 13', key = 'N13')],
-                    [sg.Button('Noise Injection 14', key = 'N14')],
-                    [sg.Button('Noise Injection 15', key = 'N15')],
-                    [sg.Button('Noise Injection 16', key = 'N16')],
-                    [sg.Button('Noise Injection 17', key = 'N17')]]
+    layer_colum = [[sg.Button('Randomize', key = 'R')]]
+
+    for i in range(1, 18):
+        layer_colum += [[sg.Button('Noise Injection ' + str(i), key = '-N' + str(i))]]
+
+    layer_colum += [[sg.Button('Set Gain', key = 'set_gain')],
+                    [sg.Input(size=(5, 5), key='gain')],
+                    [sg.Button('Set All', key = 'set_all')],
+                    [sg.Input(size=(5, 5), key='gains')]]
+
     layout = [[sg.Column(layer_colum), graph]]
     window = sg.Window('Graph test', layout, finalize=True)#.bind("<ButtonRelease-1>", ' Release')
     
@@ -152,6 +147,8 @@ def noise_window(noise, noise_torch, noise_params):
     layer = -1
     
     noise_temp = noise[-1][0,0]
+    last_cord_mem = None
+    first_cord_mem = None
     
     while True:
         event, values = window.read()
@@ -175,59 +172,79 @@ def noise_window(noise, noise_torch, noise_params):
             last_cord = []
 
         if event == 'R':
-            sz = noise_params[layer][2]
-            
-            min_x = min(first_cord_mem[0], last_cord_mem[0])
-            min_y = min(first_cord_mem[1], last_cord_mem[1])
+            if last_cord_mem:
+                sz = noise_params[layer][2]
+                
+                min_x = min(first_cord_mem[0], last_cord_mem[0])
+                min_y = min(first_cord_mem[1], last_cord_mem[1])
 
-            max_x = max(first_cord_mem[0], last_cord_mem[0])
-            max_y = max(first_cord_mem[1], last_cord_mem[1])
-            
-            w, h = max_x - min_x, max_y - min_y
+                max_x = max(first_cord_mem[0], last_cord_mem[0])
+                max_y = max(first_cord_mem[1], last_cord_mem[1])
 
-            ratio = 1024//sz
-            min_x_ratio = min_x//ratio
-            min_y_ratio = min_y//ratio
-            max_x_ratio = max_x//ratio
-            max_y_ratio = max_y//ratio
-            
-            noise_old = noise_temp.copy() 
-            noise_new_real, noise_img = gen_rand(max_y_ratio-min_y_ratio, max_x_ratio-min_x_ratio, w, h)
-            noise_temp[1024-max_y:1024-min_y, min_x:max_x] = noise_img
-            print(noise_torch[layer].mean())
-            noise_torch[layer][0,0,sz-(max_y_ratio):sz-(min_y_ratio), min_x_ratio:max_x_ratio] = torch.from_numpy(noise_new_real)
-            print(noise_torch[layer].mean())
-            print(sz-(max_y//ratio), sz-(min_y/ratio), min_x//ratio, max_x//ratio, ratio)
-            print(noise_new_real, noise_new_real.shape)
-            print(noise_torch[layer])
-            
-            
-            img = Image.fromarray(noise_temp)
-            bio = io.BytesIO()
-            img.save(bio, format= 'PNG')
-            imgbytes = bio.getvalue()
+                if any(coord in [0, None] for coord in [min_x,min_y,max_x,max_y]):
+                    continue
+                
+                ratio = 1024//sz
 
-            window['graph'].delete_figure(img_draw)
-            img_draw = window['graph'].draw_image(data=imgbytes, location=(0, 1024))
+                w, h = max_x - min_x, max_y - min_y
+
+                min_x_ratio = min_x//ratio
+                min_y_ratio = min_y//ratio
+                max_x_ratio = max_x//ratio
+                max_y_ratio = max_y//ratio
+
+                w_ratio = max_x_ratio - min_x_ratio
+                h_ratio = max_y_ratio - min_y_ratio
+                
+                # noise_temp = cv2.resize(noise_temp.copy(), (1024, 1024), interpolation = cv2.INTER_NEAREST) 
+                noise_new_real, noise_img = gen_rand(sz, w_ratio, h_ratio, w, h)
+
+                noise_temp[1024-max_y:1024-min_y, min_x:max_x] = noise_img[1024-max_y:1024-min_y, min_x:max_x] 
+                noise_torch[layer][0,0,min_x_ratio:max_x_ratio, min_y_ratio:max_y_ratio] = torch.from_numpy(noise_new_real[min_x_ratio:max_x_ratio, min_y_ratio:max_y_ratio]) #* gain[layer]
+                
+                img = Image.fromarray(noise_temp)
+                bio = io.BytesIO()
+                img.save(bio, format= 'PNG')
+                imgbytes = bio.getvalue()
+
+                window['graph'].delete_figure(img_draw)
+                img_draw = window['graph'].draw_image(data=imgbytes, location=(0, 1024))
+                
+    #             mx = noise_params[layer][1]
+    #             mn = noise_params[layer][0]
+    #             noise_temp_norm = cv2.resize(noise_temp.copy(), (sz, sz)) * (mx - mn) + mn
+    #             noise_torch[layer] = torch.from_numpy(noise_temp_norm).unsqueeze(0).unsqueeze(0)
+                noise_params[layer][0] = np.min(noise_torch[layer].cpu().numpy())
+                noise_params[layer][1] = np.max(noise_torch[layer].cpu().numpy())
+                noise_params[layer][2] = noise_torch[layer].shape[-1]
+                
+                noise[layer] = noise_temp[np.newaxis, np.newaxis]
             
-#             mx = noise_params[layer][1]
-#             mn = noise_params[layer][0]
-#             noise_temp_norm = cv2.resize(noise_temp.copy(), (sz, sz)) * (mx - mn) + mn
-#             noise_torch[layer] = torch.from_numpy(noise_temp_norm).unsqueeze(0).unsqueeze(0)
-            noise_params[layer][0] = np.min(noise_torch[layer].cpu().numpy())
-            noise_params[layer][1] = np.max(noise_torch[layer].cpu().numpy())
-            noise_params[layer][2] = noise_torch[layer].shape[-1]
             
-            noise[layer] = noise_temp[np.newaxis, np.newaxis]
-            print(noise[layer].shape)
-            
-            
-        if event == 'N1':
-            layer = int(event[1:])-1
-            set_noise(noise, layer, window, img_draw, area)
+        if event[:2] == '-N':
+            layer = int(event[2:])-1
+            # noise_temp = noise[layer][0,0]
+            noise_temp = set_noise(noise, layer, window, img_draw, area)
+            window['gain'].update(gain[layer])
+
+
+        if event == "set_gain":
+            gain[layer] = float(values["gain"]) 
+            timestamp = time.time()
+            interaction_seq_mem += [interaction_seq_mem[-1][:]]
+            interaction_seq_mem[-1][3] = gain
+            interaction_seq_mem[-1][-1] = int(timestamp)
+
+        if event == "set_all":
+            gain = [float(values["gains"]) for g in gain]
+            timestamp = time.time()
+            interaction_seq_mem += [interaction_seq_mem[-1][:]]
+            interaction_seq_mem[-1][3] = gain
+            interaction_seq_mem[-1][-1] = int(timestamp)
+
             
     window.close()
-    return noise, noise_torch, noise_params, layer
+    return noise, noise_torch, noise_params, gain, layer, interaction_seq_mem
 
 def main():
     device = "cuda"
@@ -263,34 +280,12 @@ def main():
 
     matplotlib.use('TkAgg')
 
-    layer_colum = [
-        [sg.Text('Mapping Network')], 
-        [sg.Button('Layer 1', key = '0')], 
-        [sg.Button('Layer 2', key = '1')],
-        [sg.Button('Layer 3', key = '2')],
-        [sg.Button('Layer 4', key = '3')],
-        [sg.Button('Layer 5', key = '4')],
-        [sg.Button('Layer 6', key = '5')], 
-        [sg.Button('Layer 7', key = '6')],
-        [sg.Button('Layer 8', key = '7')],
-        [sg.Text('Synth Network')], 
-        [sg.Button('Block 1_1', key = '8')], 
-        [sg.Button('Block 1_2', key = '9')], 
-        [sg.Button('Block 2_1', key = '10')], 
-        [sg.Button('Block 2_2', key = '11')], 
-        [sg.Button('Block 3_1', key = '12')], 
-        [sg.Button('Block 3_2', key = '13')], 
-        [sg.Button('Block 4_1', key = '14')], 
-        [sg.Button('Block 4_2', key = '15')], 
-        [sg.Button('Block 5_1', key = '16')], 
-        [sg.Button('Block 5_2', key = '17')], 
-        [sg.Button('Block 6_1', key = '18')], 
-        [sg.Button('Block 6_2', key = '19')], 
-        [sg.Button('Block 7_1', key = '20')], 
-        [sg.Button('Block 7_2', key = '21')], 
-        [sg.Button('Block 8_1', key = '22')], 
-        [sg.Button('Block 8_2', key = '23')], 
-    ]
+    layer_colum = [[sg.Text('Mapping Network')]]
+    for i in range(8):
+        layer_colum += [[sg.Button('Layer ' + str(i), key = str(i))]]
+    layer_colum += [[sg.Text('Synth Network')]]
+    for i in range(8, 24):
+        layer_colum += [[sg.Button('Layer ' + str(i), key = str(i))]]
 
     plot_name = "Activation Function Plot, Layer: "
 
@@ -305,17 +300,15 @@ def main():
         [r0, r1, r2, r3, r4],
         [sg.Text(size=(40, 1), key="-TOUT-")],
         [sg.Canvas(key='-CANVAS-')],
-        [sg.Text('-3',key='A1'), sg.Slider(range=(-3, 3), default_value=0, resolution=0.1, enable_events=True,
+        [sg.Text('-3',key='A1'), sg.Slider(range=(-3, 3), default_value=0, resolution=0.01, enable_events=True,
          expand_x=True, orientation='horizontal', key='-A-'), sg.Text('3',key='A2')],
-        [sg.Text('-3',key='B1'), sg.Slider(range=(-3, 3), default_value=0, resolution=0.1, enable_events=True,
+        [sg.Text('-3',key='B1'), sg.Slider(range=(-3, 3), default_value=0, resolution=0.01, enable_events=True,
          expand_x=True, orientation='horizontal', key='-B-'), sg.Text('3',key='B2')],
         [sg.Button('Reset', key = '-RESET-')],
         [sg.Text('a Min:'), sg.Input(size=(5, 5), key='a_min', enable_events=True, default_text='-3'), 
          sg.Text('a Max:'), sg.Input(size=(5, 5), key='a_max', enable_events=True, default_text='3')], 
         [sg.Text('b Min:'), sg.Input(size=(5, 5), key='b_min', enable_events=True, default_text='-3'), 
          sg.Text('b Max:'), sg.Input(size=(5, 5), key='b_max', enable_events=True, default_text='3')],
-        [sg.Text('Step A: '), sg.Input(size=(5, 5), key='stepA', enable_events=True, default_text='0.1')],
-        [sg.Text('Step B: '), sg.Input(size=(5, 5), key='stepB', enable_events=True, default_text='0.1')],
         [sg.Button('Set', key = 'set')]
     ]
 
@@ -323,7 +316,8 @@ def main():
         [sg.Image('', key='-IMAGE-')],
         [sg.Text('Random Seed:'), sg.Input(size=(5, 5), enable_events=True, key='SEED', default_text='1')],
         [sg.Button('Generate', key = '-GEN-')],
-        [sg.Button('Edit Noise', key = '-Noise-')]
+        [sg.Button('Edit Noise', key = '-Noise-')],
+        [sg.Button('Save', key = '-SAVE-')]
     ]
 
     layout = [
@@ -359,8 +353,21 @@ def main():
 
     update_plot = update_plot_sin
     act = [-1] * 8 + [-1]*16
+    gain = [1] * 18
 
     random_seed = 1
+
+    timestamp = time.time()
+    interaction_seq_mem = [[a_vals[:], b_vals[:], act[:], gain[:], [random_seed], [int(timestamp)]]]
+
+    img = generate(g_ema, device, mean_latent, noise_gen, a_vals, b_vals, idxs, act, gain, random_seed)
+    img_save = img_post(img)
+
+    img = Image.fromarray(img_save)
+    bio = io.BytesIO()
+    img.save(bio, format= 'PNG')
+    imgbytes = bio.getvalue()
+    window['-IMAGE-'].Update(data=imgbytes)
 
     while True:
         event, values = window.read()
@@ -370,11 +377,13 @@ def main():
                 
             a_vals[idx] = values['-A-']
             b_vals[idx] = values['-B-']
+            timestamp = time.time()
+            interaction_seq_mem += [[a_vals[:], b_vals[:], act[:], gain[:], [random_seed], [int(timestamp)]]]
             
-            img = generate(g_ema, device, mean_latent, noise_gen, a_vals, b_vals, idxs, act, random_seed)
-            img = img_post(img)
+            img = generate(g_ema, device, mean_latent, noise_gen, a_vals, b_vals, idxs, act, gain, random_seed)
+            img_save = img_post(img)
 
-            img = Image.fromarray(img)
+            img = Image.fromarray(img_save)
             bio = io.BytesIO()
             img.save(bio, format= 'PNG')
             imgbytes = bio.getvalue()
@@ -389,6 +398,9 @@ def main():
             
             window['-A-'].update(value = a_vals[idx])
             window['-B-'].update(value = b_vals[idx])
+
+            timestamp = time.time()
+            interaction_seq_mem += [[a_vals[:], b_vals[:], act[:], gain[:], [random_seed], [int(timestamp)]]]
             
             if act[idx] == 0:
                 window['relu'].update(False)
@@ -439,10 +451,10 @@ def main():
             window, act_plot, fig = update_viz(a_vals[idx], b_vals[idx], window, act_plot, fig, update_plot)
             
         if event == '-GEN-':
-            img = generate(g_ema, device, mean_latent, noise_gen, a_vals, b_vals, idxs, act, random_seed)
-            img = img_post(img)
+            img = generate(g_ema, device, mean_latent, noise_gen, a_vals, b_vals, idxs, act, gain, random_seed)
+            img_save = img_post(img)
 
-            img = Image.fromarray(img)
+            img = Image.fromarray(img_save)
             bio = io.BytesIO()
             img.save(bio, format= 'PNG')
             imgbytes = bio.getvalue()
@@ -454,11 +466,15 @@ def main():
             window, act_plot, fig = update_viz(a_vals[idx], b_vals[idx], window, act_plot, fig, update_plot)
             window['-A-'].update(disabled=True, value = 0.0)
             window['-B-'].update(disabled=True, value = 0.0)
+            window['relu'].update(value=True)
 
-            img = generate(g_ema, device, mean_latent, noise_gen, a_vals, b_vals, idxs, act, random_seed)
-            img = img_post(img)
+            a_vals[idx] = 0
+            b_vals[idx] = 0
 
-            img = Image.fromarray(img)
+            img = generate(g_ema, device, mean_latent, noise_gen, a_vals, b_vals, idxs, act, gain, random_seed)
+            img_save = img_post(img)
+
+            img = Image.fromarray(img_save)
             bio = io.BytesIO()
             img.save(bio, format= 'PNG')
             imgbytes = bio.getvalue()
@@ -470,6 +486,9 @@ def main():
             window, act_plot, fig = update_viz(a_vals[idx], b_vals[idx], window, act_plot, fig, update_plot)
             window['-A-'].update(disabled=True)
             window['-B-'].update(disabled=True)
+
+            timestamp = time.time()
+            interaction_seq_mem += [[a_vals[:], b_vals[:], act[:], gain[:], [random_seed], [int(timestamp)]]]
             
         if event == 'sin':
             act[idx] = 0
@@ -477,6 +496,8 @@ def main():
             window, act_plot, fig = update_viz(a_vals[idx], b_vals[idx], window, act_plot, fig, update_plot)
             window['-A-'].update(disabled=False)
             window['-B-'].update(disabled=False)
+            timestamp = time.time()
+            interaction_seq_mem += [[a_vals[:], b_vals[:], act[:], gain[:], [random_seed], [int(timestamp)]]]
             
         if event == 'cos':
             act[idx] = 1
@@ -484,6 +505,8 @@ def main():
             window, act_plot, fig = update_viz(a_vals[idx], b_vals[idx], window, act_plot, fig, update_plot)
             window['-A-'].update(disabled=False)
             window['-B-'].update(disabled=False)
+            timestamp = time.time()
+            interaction_seq_mem += [[a_vals[:], b_vals[:], act[:], gain[:], [random_seed], [int(timestamp)]]]
             
         if event == 're':
             act[idx] = 2
@@ -491,6 +514,8 @@ def main():
             window, act_plot, fig = update_viz(a_vals[idx], b_vals[idx], window, act_plot, fig, update_plot)
             window['-A-'].update(disabled=False)
             window['-B-'].update(disabled=True)
+            timestamp = time.time()
+            interaction_seq_mem += [[a_vals[:], b_vals[:], act[:], gain[:], [random_seed], [int(timestamp)]]]
             
         if event == 'shi':
             act[idx] = 3
@@ -498,18 +523,18 @@ def main():
             window, act_plot, fig = update_viz(a_vals[idx], b_vals[idx], window, act_plot, fig, update_plot)
             window['-A-'].update(disabled=False)
             window['-B-'].update(disabled=True)
+            timestamp = time.time()
+            interaction_seq_mem += [[a_vals[:], b_vals[:], act[:], gain[:], [random_seed], [int(timestamp)]]]
             
         if event in ['set']:
             a_min = values['a_min']
             a_max = values['a_max']
             b_min = values['b_min']
             b_max = values['b_max']
-            stepA = values['stepA']
-            stepB = values['stepB']
             
-            if '-' not in [a_min, a_max, b_min, b_max, stepA, stepB]:
-                window['-A-'].update(range=(int(a_min), int(a_max)), resolution=stepA)
-                window['-B-'].update(range=(int(b_min), int(b_max)), resolution=stepB)
+            if '-' not in [a_min, a_max, b_min, b_max]:
+                window['-A-'].update(range=(int(a_min), int(a_max)))
+                window['-B-'].update(range=(int(b_min), int(b_max)))
                 window['A1'].update(str(a_min))
                 window['A2'].update(str(a_max))
                 window['B1'].update(str(b_min))
@@ -520,10 +545,28 @@ def main():
             
         if event == "Exit" or event == sg.WIN_CLOSED:
             break
+
+        if event == "-SAVE-":
+            # print('./raw/imgs/' + str(int(time.time())) + '.png')
+            timestamp = time.time()
+            cv2.imwrite('./raw/imgs/' + str(int(timestamp)) + '.png', img_save[..., ::-1])
+            torch.save(noise_gen, './raw/noise/'+str(int(timestamp))+'.pt')
+            interaction_seq = [a_vals, b_vals, act, gain, [random_seed], [int(timestamp)]]
+
+            # with open("./raw/raw/"+str(int(timestamp))+".csv", "w") as f:
+            #     wr = csv.writer(f, delimiter=" ")
+            #     wr.writerows(interaction_seq)
+
+            with open("./raw/raw/"+str(int(timestamp))+".csv", 'w') as f:
+               writer = csv.writer(f)
+               writer.writerows(interaction_seq)
+            with open("./raw/raw/"+str(int(timestamp))+"_1.csv", 'w') as f:
+               writer = csv.writer(f, delimiter='\n')
+               writer.writerows(interaction_seq_mem)
+
         
         if event in ['-Noise-']: 
-            noise_gen_np,noise_gen,noise_params,layer = noise_window(noise_gen_np, noise_gen, noise_params)
-            print(len(noise_gen_np)) 
+            noise_gen_np,noise_gen,noise_params,gain,layer, interaction_seq_mem = noise_window(noise_gen_np, noise_gen, noise_params, gain, interaction_seq_mem)
         
     window.close()
 
@@ -546,7 +589,7 @@ if __name__ == '__main__':
     import PySimpleGUI as sg
     import matplotlib
     import os.path
-    import io
+    import io, csv
     from PIL import Image
     import cv2
 
