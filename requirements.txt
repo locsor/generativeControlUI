@@ -1,0 +1,15 @@
+ipython==7.34.0
+ipywidgets==7.7.2
+lmdb==1.4.1
+matplotlib==3.5.3
+numpy==1.21.5
+Pillow==9.3.0
+Pillow==9.5.0
+PySimpleGUI==4.60.5
+PySimpleGUI==4.60.5
+scipy==1.10.1
+skimage==0.0
+torch==1.7.1
+torchvision==0.8.2
+tqdm==4.65.0
+wandb==0.15.4
