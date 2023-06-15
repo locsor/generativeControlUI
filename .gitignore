@@ -12,6 +12,8 @@ weights/
 *.pt
 *.pkl
 
+*.zip
+
 # Distribution / packaging
 .Python
 build/
