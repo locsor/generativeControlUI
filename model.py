@@ -35,7 +35,7 @@ def reLUNfunc(x, n):
     return minv
 
 def shiFunc(x, a, b):
-    return a * F.relu(x) + b
+    return a * F.relu(x)# + b
 
 class mySequential(nn.Sequential):
     def forward(self, *inputs):
@@ -185,7 +185,6 @@ class EqualLinear(nn.Module):
 
     def forward(self, input, ab=None, ct=None, idx=None, act=None):
         if self.activation:
-            # print("EqualLinear")
             out = F.linear(input, self.weight * self.scale)
 
             if ct in idx:
@@ -208,7 +207,6 @@ class EqualLinear(nn.Module):
             )
 
         if ct != None:
-            # print(ct, idx)
             ct += 1
             return out, ab, ct, idx, act
         return out
@@ -363,11 +361,9 @@ class NoiseInjection(nn.Module):
 
     def forward(self, image, gain=None, noise=None):
         if noise is None:
-            print('?')
             batch, _, height, width = image.shape
             noise = image.new_empty(batch, 1, height, width).normal_()
 
-        print(gain)
         return image + self.weight * gain * noise
 
 
@@ -493,6 +489,8 @@ class Generator(nn.Module):
             1024: 16 * channel_multiplier,
         }
 
+        self.channels_inv =  {v: k for k, v in self.channels.items()}
+
         self.input = ConstantInput(self.channels[4])
         self.conv1 = StyledConv(
             self.channels[4], self.channels[4], 3, style_dim, blur_kernel=blur_kernel,
@@ -575,12 +573,26 @@ class Generator(nn.Module):
         ab=[[],[]],
         idx=[],
         act=[],
-        gain=[]
+        gain=[],
+        disable=[],
+        dry=False
     ):
 
+        if dry:
+            layers_scout = [] 
+
+        ct_layer = 0
         if not input_is_latent:
-            styles = [[self.style(s, ab, 0, idx, act) for s in styles][0][0]]
-            # print(styles[0][0])
+            for i in range(len(self.style)):
+                if i in disable:
+                    ct_layer += 1
+                    continue
+
+                styles = [self.style[i](styles[0], ab, ct_layer, idx, act)[0]]
+                ct_layer += 1
+
+            if dry:
+                layers_scout += [[self.style, 0, -1]]
 
         if noise is None:
             if randomize_noise:
@@ -626,26 +638,61 @@ class Generator(nn.Module):
 
         # print("Conv1")
         gain_ct = 0
-        out = self.conv1(out, latent[:, 0], gain_ct, noise=noise[0], ab=ab, act=act, ct=8, gain=gain)
+        if 9 not in disable:
+            out = self.conv1(out, latent[:, 0], gain_ct, noise=noise[0], ab=ab, act=act, ct=10, gain=gain)
+        if dry:
+            layers_scout += [[self.conv1, 2, 1,]]
 
         # print("RGB1")
         skip = self.to_rgb1(out, latent[:, 1])
+        if dry:
+            layers_scout += [[self.to_rgb1, 3, 2, 0]]
 	   
         # print("Main")
-        ct_ = 7
+        ct_ = 10
         i = 1
+        layer_ct = 3
+        bb = 0
+
         for conv1, conv2, noise1, noise2, to_rgb in zip(
             self.convs[::2], self.convs[1::2], noise[1::2], noise[2::2], self.to_rgbs
-        ):
-            out = conv1(out, latent[:, i], gain_ct+1, noise=noise1, ab=ab, act=act, ct= ct_ + 1, gain=gain)
-            out = conv2(out, latent[:, i + 1], gain_ct+2, noise=noise2, ab=ab, act=act, ct= ct_ + 2, gain=gain)
-            skip = to_rgb(out, latent[:, i + 2], skip)
+        ):  
+            if layer_ct + 9 not in disable:
+                out = conv1(out, latent[:, i], gain_ct+1, noise=noise1, ab=ab, act=act, ct= layer_ct + 9, gain=gain)
+            else:
+                out = F.interpolate(out, scale_factor=2, mode='nearest')
+
+                filter_size = self.channels[out.shape[-1]]
+                if filter_size != out.shape[1]:
+                    out = out[:,:filter_size]
+                # out = F.interpolate(out, scale_factor=(0.5,1), mode='nearest')
+                # print(out.shape)
+                #out = F.interpolate(out, scale_factor=2, mode='nearest')
+
+            if (layer_ct + 10 not in disable):
+                out = conv2(out, latent[:, i + 1], gain_ct+2, noise=noise2, ab=ab, act=act, ct= layer_ct + 10, gain=gain)
+            # else:
+                # out = F.interpolate(out, scale_factor=2, mode='nearest')
+
+            if layer_ct + 11 not in disable:
+                skip = to_rgb(out, latent[:, i + 2], skip)
+            else:
+                skip = F.interpolate(skip, scale_factor=2, mode='nearest')
+
+            if dry:
+                layers_scout += [[conv1, layer_ct+1, layer_ct, 0]]
+                layers_scout += [[conv2, layer_ct+2, layer_ct+1, 0]]
+                layers_scout += [[to_rgb, layer_ct+3, layer_ct+2, 0]]
 
             i += 2
-            ct_ += 2
+            ct_ += 3
             gain_ct += 2
+            layer_ct += 3
 
         image = skip
+
+        if dry:
+            return layers_scout
 
         if return_latents:
             return image, latent
