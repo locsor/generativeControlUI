@@ -11,68 +11,74 @@ from PIL import Image
 
 import time
 
+font = ('gothic', 13)
+color = '#1B1B1B'
+button_color='#808080'
+background_color='#d3d3d3'
+scrollbar_color='#808080'
+
 def build(plot_name):
     viz_graph=[[sg.Graph(canvas_size=(750, 901), graph_bottom_left=(0, 0), graph_top_right=(750,901),
                         background_color='red', enable_events=True, drag_submits=True, key='viz_graph')],
-               [sg.Button('Disable Node', key='disable_node'), sg.Button('Enable Node', key='restore_node'), sg.Button('Enable All Nodes', key='restore_all_nodes')]]
+               [sg.Button('Disable Node', key='disable_node',font=font,button_color=button_color, tooltip='Disables selected node(s)'),
+                sg.Button('Enable Node', key='restore_node',font=font,button_color=button_color, tooltip='Enables selected node(s)'),
+                sg.Button('Enable All Nodes', key='restore_all_nodes',font=font,button_color=button_color, tooltip='Enables all node(s)')]]
 
-    layer_colum = [[sg.Text('Mapping Network')]]
-    for i in range(8):
-        layer_colum += [[sg.Button('Layer ' + str(i), key = str(i))]]
-    layer_colum += [[sg.Text('Synth Network')]]
-    for i in range(8, 24):
-        layer_colum += [[sg.Button('Layer ' + str(i), key = str(i))]]
+    r0 = sg.Radio("ReLU", "gen", key='relu', default=True, enable_events=True, background_color=color, font=font, tooltip='Default activation function')
+    r1 = sg.Radio("SinLU", "gen", key='sin', default=False, enable_events=True, background_color=color,font=font, tooltip='Sinu-sigmoidal Linear Unit')
+    r2 = sg.Radio("CosLU", "gen", key='cos', enable_events=True, background_color=color,font=font, tooltip='Cosine Linear Unit')
+    r3 = sg.Radio("ReLUN", "gen", key='re', enable_events=True, background_color=color,font=font, tooltip='Rectified Linear Unit N')
+    r4 = sg.Radio("ShiLU", "gen", key='shi', enable_events=True, background_color=color,font=font, tooltip='Shifted Rectified Linear Unit')
 
-    r0 = sg.Radio("ReLU", "gen", key='relu', default=True, enable_events=True, background_color='#9897A9')
-    r1 = sg.Radio("SinLU", "gen", key='sin', default=False, enable_events=True, background_color='#9897A9')
-    r2 = sg.Radio("CosLU", "gen", key='cos', enable_events=True, background_color='#9897A9')
-    r3 = sg.Radio("ReLUN", "gen", key='re', enable_events=True, background_color='#9897A9')
-    r4 = sg.Radio("ShiLU", "gen", key='shi', enable_events=True, background_color='#9897A9')
-
-    graph_control = [[sg.Text('a Min: -3', key='a_min_text', background_color='#9897A9'), sg.Text('a Max: 3', key='a_max_text', background_color='#9897A9')],
-                     [sg.Input(size=(5, 5), key='a_min', enable_events=True, default_text='-3', background_color='#9897A9'), 
-                      sg.Input(size=(5, 5), key='a_max', enable_events=True, default_text='3', background_color='#9897A9')],
-                     [sg.Text('b Min: -3', key='b_min_text', background_color='#9897A9'), sg.Text('b Max: 3', key='b_max_text', background_color='#9897A9')], 
-                     [sg.Input(size=(5, 5), key='b_min', enable_events=True, default_text='-3', background_color='#9897A9'), 
-                      sg.Input(size=(5, 5), key='b_max', enable_events=True, default_text='3', background_color='#9897A9')],
-                     [sg.Button('Set', key = 'set')]]
+    graph_control = [[sg.Text('a Min: -3', key='a_min_text', background_color=color, font=font), sg.Text('a Max: 3', key='a_max_text', background_color=color, font=font)],
+                     [sg.Input(size=(5, 5), key='a_min', enable_events=True, default_text='-3', background_color=color,text_color='#FFFFFF'), 
+                      sg.Input(size=(5, 5), key='a_max', enable_events=True, default_text='3', background_color=color,text_color='#FFFFFF')],
+                     [sg.Text('b Min: -3', key='b_min_text', background_color=color, font=font), sg.Text('b Max: 3', key='b_max_text', background_color=color, font=font)], 
+                     [sg.Input(size=(5, 5), key='b_min', enable_events=True, default_text='-3', background_color=color,text_color='#FFFFFF'), 
+                      sg.Input(size=(5, 5), key='b_max', enable_events=True, default_text='3', background_color=color,text_color='#FFFFFF')],
+                     [sg.Button('Set', key = 'set',font=font,button_color=button_color)]]
 
     walk_control = [
-                    [sg.Text('Brush Size: 10', key='brush_size_text', background_color='#9897A9')],
-                    [sg.Slider(range=(1, 32), default_value=4, expand_x=True, enable_events=True, orientation='horizontal', key='brush_size')],
-                    [sg.Text('Magnitude: 1', key='magnitude_text', background_color='#9897A9')],
-                    [sg.Slider(range=(0.1, 2), default_value=1, resolution=0.1, expand_x=True, enable_events=True, orientation='horizontal', key='magnitude')],
-                    [sg.Button('Reset', key = 'reset-walk')]
+                    [sg.Text('Brush Size: 10', key='brush_size_text', background_color=color, font=font)],
+                    [sg.Slider(range=(1, 32), default_value=4, expand_x=True, enable_events=True,
+                               orientation='horizontal', key='brush_size',background_color=background_color,trough_color=button_color)],
+                    [sg.Text('Magnitude: 1', key='magnitude_text', background_color=color, font=font)],
+                    [sg.Slider(range=(0.1, 2), default_value=1, resolution=0.1, expand_x=True, enable_events=True, orientation='horizontal',
+                               key='magnitude',background_color=background_color,trough_color=button_color)],
+                    [sg.Button('Reset', key = 'reset-walk',font=font,button_color=button_color)]
                    ]
 
     plot_viewer_column = [
-        [sg.Text(plot_name, key='-PLOT-', enable_events=True, background_color='#9897A9')],
+        [sg.Text(plot_name, key='-PLOT-', enable_events=True, background_color=color, font=font)],
         [r0, r1, r2, r3, r4],
-        [sg.Text(size=(40, 1), key="-TOUT-", background_color='#9897A9')],
-        [sg.Canvas(key='-CANVAS-')],
+        [sg.Text(size=(40, 1), key="-TOUT-", background_color=color, font=font)],
+        [sg.Canvas(key='-CANVAS-', background_color=color)],
         [sg.Graph(canvas_size=(200, 200), graph_bottom_left=(0, 0), graph_top_right=(200,200),
-                    background_color='red', enable_events=True, drag_submits=True, key='ab_graph'), sg.Column(graph_control, background_color='#9897A9', key='graph_control')],
+                    background_color='red', enable_events=True, drag_submits=True, key='ab_graph', tooltip='Changne a and b parameters of activation functions'),
+         sg.Column(graph_control, background_color=color, key='graph_control')],
         [sg.Graph(canvas_size=(200, 200), graph_bottom_left=(0, 0), graph_top_right=(200,200),
-                    background_color='red', enable_events=True, drag_submits=True, key='walk_graph'), sg.Column(walk_control, background_color='#9897A9', key='graph_control')]
+                    background_color='red', enable_events=True, drag_submits=True, key='walk_graph'), sg.Column(walk_control, background_color=color, key='graph_control')]
     ]
 
     image_column = [
-        [sg.Image('', key='-IMAGE-', background_color='#9897A9')],
-        [sg.Text('Random Seed:', background_color='#9897A9'), sg.Input(size=(5, 5), enable_events=True, key='SEED', default_text='1', background_color='#9897A9')],
-        [sg.Button('Change Seed', key = '-GEN-')],
-        [sg.Button('Edit Noise', key = '-Noise-')],
-        [sg.Button('Save', key = '-SAVE-')],
-        [sg.Text('X: ', key = 'x_text', background_color='#9897A9'), sg.Text('Y: ', key = 'y_text', background_color='#9897A9')],
-        [sg.Button('Reset Activation Function', key = '-RESET-'), sg.Button('Reset All Activation Functions', key = '-RESETALL-')]
+        [sg.Image('', key='-IMAGE-', background_color=color)],
+        [sg.Text('Random Seed:', background_color=color, font=font), sg.Input(size=(5, 5), enable_events=True, key='SEED', default_text='1', text_color='#FFFFFF', background_color=color)],
+        [sg.Button('Change Seed', key = '-GEN-',font=font,button_color=button_color)],
+        [sg.Text('Noise magnification:', background_color=color, font=font), sg.Input(size=(5, 5), enable_events=True, key='noise_set', default_text='1', text_color='#FFFFFF', background_color=color)],
+        [sg.Button('Edit Noise', key = '-Noise-',font=font,button_color=button_color)],
+        [sg.Button('Save', key = '-SAVE-',font=font,button_color=button_color)],
+        [sg.Text('X: ', key = 'x_text', background_color=color, font=font), sg.Text('Y: ', key = 'y_text', background_color=color, font=font)],
+        [sg.Button('Reset Activation Function', key = '-RESET-',font=font,button_color=button_color)],
+        [sg.Button('Reset All Activation Functions', key = '-RESETALL-',font=font,button_color=button_color)]
     ]
 
     layout = [
         [   
-            sg.Column(viz_graph, background_color='#9897A9'),
+            sg.Column(viz_graph, background_color=color),
             sg.VSeperator(),
-            sg.Column(plot_viewer_column, background_color='#9897A9'),
+            sg.Column(plot_viewer_column, background_color=color),
             sg.VSeperator(),
-            sg.Column(image_column, background_color='#9897A9'),
+            sg.Column(image_column, background_color=color),
         ]
     ]
 
@@ -230,14 +236,14 @@ def noise_window(noise, noise_torch, noise_params, gain, interaction_seq_mem):
     graph=sg.Graph(canvas_size=(1024,1024), graph_bottom_left=(0, 0), graph_top_right=(1024,1024),
     background_color='red', enable_events=True, drag_submits=True, key='graph')
 
-    layer_colum = [[sg.Button('Randomize', key = 'R')]]
+    layer_colum = [[sg.Button('Randomize', key = 'R',font=font,button_color=button_color)]]
 
     for i in range(1, 18):
-        layer_colum += [[sg.Button('Noise Injection ' + str(i), key = '-N' + str(i))]]
+        layer_colum += [[sg.Button('Noise Injection ' + str(i), font=font, button_color=button_color, key = '-N' + str(i))]]
 
-    layer_colum += [[sg.Button('Set Gain', key = 'set_gain')],
+    layer_colum += [[sg.Button('Set Gain', key = 'set_gain',font=font,button_color=button_color)],
                     [sg.Input(size=(5, 5), key='gain')],
-                    [sg.Button('Set All', key = 'set_all')],
+                    [sg.Button('Set All', key = 'set_all',font=font,button_color=button_color)],
                     [sg.Input(size=(5, 5), key='gains')]]
 
     layout = [[sg.Column(layer_colum), graph]]

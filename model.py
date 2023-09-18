@@ -30,12 +30,12 @@ def cosFunc(x, a, b):
 
 def reLUNfunc(x, n):
     maxv = torch.max(torch.zeros_like(x), x)
-    minv = torch.min(maxv, torch.ones_like(x) * n)
+    minv = torch.min(maxv, torch.ones_like(x) * (n+1))
 
     return minv
 
 def shiFunc(x, a, b):
-    return a * F.relu(x)# + b
+    return a * F.relu(x) + b
 
 class mySequential(nn.Sequential):
     def forward(self, *inputs):
@@ -633,22 +633,22 @@ class Generator(nn.Module):
             latent = torch.cat([latent, latent2], 1)
 
 
-        # print("Input")
         out = self.input(latent)
 
-        # print("Conv1")
         gain_ct = 0
-        if 9 not in disable:
+
+        if 10 not in disable:
             out = self.conv1(out, latent[:, 0], gain_ct, noise=noise[0], ab=ab, act=act, ct=10, gain=gain)
         if dry:
             layers_scout += [[self.conv1, 2, 1,]]
+        if 11 not in disable:
+            skip = self.to_rgb1(out, latent[:, 1])
+        else:
+            skip = torch.zeros([1, 3, 4, 4], dtype=out.dtype).cuda()
 
-        # print("RGB1")
-        skip = self.to_rgb1(out, latent[:, 1])
         if dry:
             layers_scout += [[self.to_rgb1, 3, 2, 0]]
 	   
-        # print("Main")
         ct_ = 10
         i = 1
         layer_ct = 3

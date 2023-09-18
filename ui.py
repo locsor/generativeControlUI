@@ -16,6 +16,16 @@ def generate(g_ema, sample_z, mean_latent, noise, a, b, idxs, act, gain, dis, ra
         img_post_save(sample, name_it)
         return sample
 
+
+def check_rgb(ans, node_names):
+    res = True
+    for a in ans:
+        print(node_names[a])
+        if 'RGB' not in node_names[a]:
+            res = False
+
+    return res
+
 def main():
     g_ema = Generator(cfg.MODEL.size, cfg.MODEL.latent, cfg.MODEL.n_mlp, channel_multiplier=cfg.MODEL.channel_multiplier).to(cfg.MODEL.device)
     checkpoint = torch.load(cfg.MODEL.ckpt)
@@ -69,29 +79,45 @@ def main():
     a_min, a_max = b_min, b_max = -3, 3
 
     node_pos, node_names = viz_prep(a_vals, b_vals, act, g_ema)
-    im = Image.open("model_image.png")
-    graph_image = np.array(im, dtype=np.uint8)
-    graph_image_persistant = np.array(im, dtype=np.uint8)
-    data = array_to_data(graph_image)
+    # print(node_pos)
+    # node_names = ['Z', 'EqualLinear0', 'EqualLinear1', 'EqualLinear2', 'EqualLinear3', 'EqualLinear4', 'EqualLinear5', 'EqualLinear6', 'EqualLinear7', 'W',
+    #               'StyledConv0', 'ToRGB0', 'StyledConv1', 'StyledConv2', 'ToRGB1', 'StyledConv3', 'StyledConv4', 'ToRGB2', 'StyledConv5', 'StyledConv6', 'ToRGB3',
+    #               'StyledConv7', 'StyledConv8', 'ToRGB4', 'StyledConv9', 'StyledConv10', 'ToRGB5', 'StyledConv11', 'StyledConv12', 'ToRGB6', 'StyledConv13',
+    #               'StyledConv14', 'ToRGB7', 'StyledConv15', 'StyledConv16', 'ToRGB8']
+    # im = Image.open("model_image.png")
+    # im = #Image.open("model_io.drawio.png")
+    graph_image = cv2.imread("model_image.png", 0) #np.array(im, dtype=np.uint8)
+    graph_image = 255-graph_image
+    graph_image[graph_image==0] = 27
+    graph_image = cv2.resize(graph_image, (750,901))
+    graph_image_persistant = copy.deepcopy(graph_image)
+    data = array_to_data(graph_image)   
 
     plot_name = "Activation Function Plot, Layer: "
     layout = build(plot_name)
 
-    window = sg.Window("Image Viewer", layout, size=(1850, 1200), finalize=True, return_keyboard_events=True, background_color='#9897A9')
+    font = ('gothic', 13)
+    color = '#1B1B1B'
+    window = sg.Window("Image Viewer", layout, size=(1850, 1200), finalize=True, return_keyboard_events=True, background_color=color)
 
     window["viz_graph"].draw_image(data=data, location=(0, 901))
 
-    array_sq = cv2.line(np.zeros((200,200), dtype=np.uint8), (100,0), (100,200), (255,255,255), 2)
-    array_sq = cv2.line(array_sq, (0,100), (200,100), (255,255,255), 2)
+    array_sq = cv2.line(np.zeros((200,200), dtype=np.uint8), (100,0), (100,200), (211,211,211), 2)
+    array_sq = cv2.line(array_sq, (0,100), (200,100), (211,211,211), 2)
     array_sq_persistant = array_sq.copy()
     data_sq = array_to_data(array_sq)
     window["ab_graph"].draw_image(data=data_sq, location=(0, 200))
 
+    matplotlib.rcParams['axes.edgecolor'] = '#d3d3d3'
     fig = matplotlib.figure.Figure(figsize=(5, 4), dpi=100)
+    fig.set_facecolor((0.106, 0.106, 0.106))
     x, y = update_plot_relu(0, 0)
     ax = fig.add_subplot(111)
     ax.set_ylim([-2, 5])
-    act_plot, = ax.plot(x, y)
+    ax.set_facecolor((0.106, 0.106, 0.106))
+    ax.tick_params(axis='x', colors=(0.827, 0.827, 0.827))
+    ax.tick_params(axis='y', colors=(0.827, 0.827, 0.827))
+    act_plot, = ax.plot(x, y, color=(0.827, 0.827, 0.827))
     tkcanvas = draw_figure(window['-CANVAS-'].TKCanvas, fig)
 
     random_seed = 1
@@ -122,9 +148,10 @@ def main():
     window.bind('<Control-y>', 'REDO')
     shift = False
 
-    window = visibility_logic(window, False)
+    window = visibility_logic(window, True)
 
     state = []
+    state_total = []
     state_redo = []
     undo_step = 0
     undo_flag = False
@@ -138,13 +165,17 @@ def main():
         if start:
             window = draw_graph(window, [ans], layers_act, node_pos, layers2disable, graph_image_persistant)
             window['-PLOT-'].update(plot_name + node_names[1])
+            window = visibility_logic(window, False)
             window, update_plot = update_rad(act[ans], window)
+
+            block = False
             window, act_plot, fig = update_viz(a_vals[ans], b_vals[ans], window, act_plot, fig, update_plot)
 
             layers_group = [ans]
             idx_group = [ans]
             state = add2state([sample_z, magnitude, brush_size], [a_vals, b_vals, a_min, a_max, b_min, b_max, act], gain, noise_gen_np,
                                noise_gen, noise_params, layers2disable, random_seed, idx_group, layers_group, state)
+            state_total += [copy.deepcopy(state[-1])]
             start = False
 
         event, values = window.read()
@@ -212,7 +243,11 @@ def main():
                 window = visibility_logic(window, False)
             else:
                 window = visibility_logic(window, True)
-            window, act_plot, fig = update_viz(a_vals[layers_group[0]], b_vals[layers_group[0]], window, act_plot, fig, update_plot)
+
+            block = False
+            if layers_group[-1] in layers2disable:
+                block = True
+            window, act_plot, fig = update_viz(a_vals[layers_group[0]], b_vals[layers_group[0]], window, act_plot, fig, update_plot, block)
 
             sample_np = sample_z.detach().cpu().numpy()
             polygon = calc_polygon(sample_np, sample_persistant, magnitude)
@@ -290,7 +325,10 @@ def main():
                 window = visibility_logic(window, False)
             else:
                 window = visibility_logic(window, True)
-            window, act_plot, fig = update_viz(a_vals[layers_group[0]], b_vals[layers_group[0]], window, act_plot, fig, update_plot)
+            block = False
+            if layers_group[-1] in layers2disable:
+                block = True
+            window, act_plot, fig = update_viz(a_vals[layers_group[0]], b_vals[layers_group[0]], window, act_plot, fig, update_plot, block)
 
             sample_np = sample_z.detach().cpu().numpy()
             polygon = calc_polygon(sample_np, sample_persistant, magnitude)
@@ -338,6 +376,12 @@ def main():
 
             state = add2state([sample_z, magnitude, brush_size], [a_vals, b_vals, a_min, a_max, b_min, b_max, act], gain, noise_gen_np,
                                noise_gen, noise_params, layers2disable, random_seed, idx_group, layers_group, state)
+            state_total += [copy.deepcopy(state[-1])]
+
+            block = False
+            if layers_group[-1] in layers2disable:
+                block = True
+            window, act_plot, fig = update_viz(a_vals[layers_group[0]], b_vals[layers_group[0]], window, act_plot, fig, update_plot, block)
 
         if event == "restore_node":
             if undo_flag:
@@ -366,6 +410,7 @@ def main():
 
             state = add2state([sample_z, magnitude, brush_size], [a_vals, b_vals, a_min, a_max, b_min, b_max, act], gain, noise_gen_np,
                                noise_gen, noise_params, layers2disable, random_seed, idx_group, layers_group, state)
+            state_total += [copy.deepcopy(state[-1])]
 
 
         if event == "restore_all_nodes":
@@ -394,6 +439,7 @@ def main():
 
             state = add2state([sample_z, magnitude, brush_size], [a_vals, b_vals, a_min, a_max, b_min, b_max, act], gain, noise_gen_np,
                                noise_gen, noise_params, layers2disable, random_seed, idx_group, layers_group, state)
+            state_total += [copy.deepcopy(state[-1])]
 
         if event == "magnitude":
             slider_flag = True
@@ -413,6 +459,7 @@ def main():
 
             state = add2state([sample_z, magnitude, brush_size], [a_vals, b_vals, a_min, a_max, b_min, b_max, act], gain, noise_gen_np, 
                                noise_gen, noise_params, layers2disable, random_seed, idx_group, layers_group, state)
+            state_total += [copy.deepcopy(state[-1])]
 
         if event == "brush_size":
             if undo_flag:
@@ -427,6 +474,7 @@ def main():
             brush_size = int(values["brush_size"])
             state = add2state([sample_z, magnitude, brush_size], [a_vals, b_vals, a_min, a_max, b_min, b_max, act], gain, noise_gen_np, 
                                noise_gen, noise_params, layers2disable, random_seed, idx_group, layers_group, state)
+            state_total += [copy.deepcopy(state[-1])]
         if event == "reset-walk":
             if undo_flag:
                 undo_flag = False
@@ -458,6 +506,7 @@ def main():
 
             state = add2state([sample_z, magnitude, brush_size], [a_vals, b_vals, a_min, a_max, b_min, b_max, act], gain, noise_gen_np,
                                noise_gen, noise_params, layers2disable, random_seed, idx_group, layers_group, state)
+            state_total += [copy.deepcopy(state[-1])]
 
         if event == "walk_graph":
             if undo_flag:
@@ -495,7 +544,7 @@ def main():
                 sample_z[:, ii] = r
 
             array_walk = np.zeros((200,200,3), dtype = np.uint8)
-            array_walk = cv2.polylines(array_walk, [polygon], True, (255, 255, 255), 1)
+            array_walk = cv2.polylines(array_walk, [polygon], True, (211, 211, 211), 1)
             array_walk_persistant = array_walk.copy()
             data_walk = array_to_data(array_walk)
             window["walk_graph"].draw_image(data=data_walk, location=(0, 200))
@@ -511,6 +560,7 @@ def main():
 
             state = add2state([sample_z, magnitude, brush_size], [a_vals, b_vals, a_min, a_max, b_min, b_max, act], gain, noise_gen_np,
                                noise_gen, noise_params, layers2disable, random_seed, idx_group, layers_group, state)
+            state_total += [copy.deepcopy(state[-1])]
 
 
         if event == "ab_graph":
@@ -555,6 +605,7 @@ def main():
 
             state = add2state([sample_z, magnitude, brush_size], [a_vals, b_vals, a_min, a_max, b_min, b_max, act], gain, noise_gen_np,
                                noise_gen, noise_params, layers2disable, random_seed, idx_group, layers_group, state)
+            state_total += [copy.deepcopy(state[-1])]
 
 
         if event == 'Shift_Down':
@@ -585,40 +636,52 @@ def main():
             window["ab_graph"].draw_image(data=data_sq, location=(0, 200))
 
             if shift == True:
-                layers_group += [ans]
-                layers_group = list(set(layers_group))
+                if ans not in [-1,0,9]:
+                    layers_group += [ans]
+                    layers_group = list(set(layers_group))
             if shift == False:
-                layers_group = [ans]
+                if ans not in [-1,0,9]:
+                    layers_group = [ans]
 
-            current_name = plot_name + "multiple"
-            window['-PLOT-'].update(current_name)
             
             for l in layers_group:
                 if l in layers_act:
                     idx_group += [l]
             idx_group = list(set(idx_group))
 
-            if ans != -1:
+            if ans not in [-1,0,9]:
                 window, update_plot = update_rad(act[ans], window)
                 window = draw_graph(window, layers_group, layers_act, node_pos, layers2disable, graph_image_persistant)
-                window, act_plot, fig = update_viz(a_vals[ans], b_vals[ans], window, act_plot, fig, update_plot)
 
-                if act[ans] == -1:
+                block = False
+                if ans in layers2disable:
+                    block = True
+                print(block)
+                window, act_plot, fig = update_viz(a_vals[ans], b_vals[ans], window, act_plot, fig, update_plot, block)
+
+                if act[ans] == -1 :
+                    window = visibility_logic2(window, True)
                     window = visibility_logic(window, False)
+                elif check_rgb(layers_group, node_names):
+                    window = visibility_logic2(window, False)
                 else:
-                    window = visibility_logic(window, True)
+                    window = visibility_logic2(window, True)
 
                 if shift == False:
                     state = add2state([sample_z, magnitude, brush_size], [a_vals, b_vals, a_min, a_max, b_min, b_max, act], gain, noise_gen_np,
                                        noise_gen, noise_params, layers2disable, random_seed, idx_group, layers_group, state)
+                    state_total += [copy.deepcopy(state[-1])]
 
             if ans in layers_act and len(layers_group) == 1:
                 window['-PLOT-'].update(plot_name + node_names[ans])
+            if len(layers_group) > 1:
+                current_name = plot_name + "multiple"
 
         if event == 'Shift_L:50':
             if len(layers_group) > 0:
                 state = add2state([sample_z, magnitude, brush_size], [a_vals, b_vals, a_min, a_max, b_min, b_max, act], gain, noise_gen_np,
                                    noise_gen, noise_params, layers2disable, random_seed, idx_group, layers_group, state)
+                state_total += [copy.deepcopy(state[-1])]
             
         if event == '-GEN-':
             if undo_flag:
@@ -632,7 +695,7 @@ def main():
 
             random_seed = int(values['SEED'])
             torch.manual_seed(random_seed)
-            sample_z = torch.randn(sample, cfg.MODEL.latent, device=cfg.MODEL.device)
+            sample_z = torch.randn(1, cfg.MODEL.latent, device=cfg.MODEL.device)
             sample_np = sample_z.detach().cpu().numpy()
             sample_persistant = copy.deepcopy(sample_np)
             sample_persistant_orig = copy.deepcopy(sample_np)
@@ -649,10 +712,14 @@ def main():
             window['-IMAGE-'].Update(data=imgbytes)
             time.sleep(0.1)
 
-            window, act_plot, fig = update_viz(a_vals[layers_group[-1]], b_vals[layers_group[-1]], window, act_plot, fig, update_plot)
+            block = False
+            if layers_group[-1] in layers2disable:
+                block = True
+            window, act_plot, fig = update_viz(a_vals[layers_group[-1]], b_vals[layers_group[-1]], window, act_plot, fig, update_plot, block)
 
             state = add2state([sample_z, magnitude, brush_size], [a_vals, b_vals, a_min, a_max, b_min, b_max, act], gain, noise_gen_np,
                                noise_gen, noise_params, layers2disable, random_seed, idx_group, layers_group, state)
+            state_total += [copy.deepcopy(state[-1])]
             
         if event == '-RESET-':
             if undo_flag:
@@ -672,7 +739,10 @@ def main():
             window = visibility_logic(window, False)
 
             update_plot = update_plot_relu
-            window, act_plot, fig = update_viz(a_vals[layers_group[-1]], b_vals[layers_group[-1]], window, act_plot, fig, update_plot)
+            block = False
+            if layers_group[-1] in layers2disable:
+                block = True
+            window, act_plot, fig = update_viz(a_vals[layers_group[-1]], b_vals[layers_group[-1]], window, act_plot, fig, update_plot, block)
             window['relu'].update(value=True)
 
             img = generate(g_ema, sample_z, mean_latent, noise_gen, a_vals, b_vals, idx_group, act, gain, layers2disable, random_seed)
@@ -686,6 +756,7 @@ def main():
 
             state = add2state([sample_z, magnitude, brush_size], [a_vals, b_vals, a_min, a_max, b_min, b_max, act], gain, noise_gen_np,
                                noise_gen, noise_params, layers2disable, random_seed, idx_group, layers_group, state)
+            state_total += [copy.deepcopy(state[-1])]
 
         if event == '-RESETALL-':
             if undo_flag:
@@ -718,6 +789,7 @@ def main():
 
             state = add2state([sample_z, magnitude, brush_size], [a_vals, b_vals, a_min, a_max, b_min, b_max, act], gain, noise_gen_np,
                                noise_gen, noise_params, layers2disable, random_seed, idx_group, layers_group, state)
+            state_total += [copy.deepcopy(state[-1])]
 
 
         if event in act_names:
@@ -745,7 +817,10 @@ def main():
 
             for i in layers_group:
                 act[i] = act_id
-            window, act_plot, fig = update_viz(a_vals[layers_group[-1]], b_vals[layers_group[-1]], window, act_plot, fig, update_plot)
+            block = False
+            if layers_group[-1] in layers2disable:
+                block = True
+            window, act_plot, fig = update_viz(a_vals[layers_group[-1]], b_vals[layers_group[-1]], window, act_plot, fig, update_plot, block)
 
             if act_id == -1:
                 window = visibility_logic(window, False)
@@ -763,6 +838,7 @@ def main():
 
             state = add2state([sample_z, magnitude, brush_size], [a_vals, b_vals, a_min, a_max, b_min, b_max, act], gain, noise_gen_np,
                                noise_gen, noise_params, layers2disable, random_seed, idx_group, layers_group, state)
+            state_total += [copy.deepcopy(state[-1])]
             
         if event == 'set':
             if undo_flag:
@@ -781,22 +857,27 @@ def main():
 
             state = add2state([sample_z, magnitude, brush_size], [a_vals, b_vals, a_min, a_max, b_min, b_max, act], gain, noise_gen_np,
                                noise_gen, noise_params, layers2disable, random_seed, idx_group, layers_group, state)
+            state_total += [copy.deepcopy(state[-1])]
             
         if event == "Exit" or event == sg.WIN_CLOSED:
             break
 
         if event == "-SAVE-":
             timestamp = time.time()
-            cv2.imwrite('./raw/imgs/' + str(int(timestamp)) + '.png', img_save[..., ::-1])
-            torch.save(noise_gen, './raw/noise/'+str(int(timestamp))+'.pt')
-            interaction_seq = [a_vals, b_vals, act, gain, [random_seed], [int(timestamp)]]
+            img = generate(g_ema, sample_z, mean_latent, noise_gen, a_vals, b_vals, idx_group, act, gain, layers2disable, random_seed)
+            img_out = img_post(img)[...,::-1]
+            cv2.imwrite('./output/' + str(int(timestamp)) + '.png', img_out)
+            # torch.save(noise_gen, './raw/noise/'+str(int(timestamp))+'.pt')
+            # interaction_seq = [a_vals, b_vals, act, gain, [random_seed], [int(timestamp)]]
 
-            with open("./raw/raw/"+str(int(timestamp))+".csv", 'w') as f:
+            with open("./output/"+str(int(timestamp))+".csv", 'w') as f:
                writer = csv.writer(f)
-               writer.writerows(interaction_seq)
-            with open("./raw/raw/"+str(int(timestamp))+"_1.csv", 'w') as f:
-               writer = csv.writer(f, delimiter='\n')
-               writer.writerows(interaction_seq_mem)
+               writer.writerows(state_total)
+
+            state_total = []
+            # with open("./raw/raw/"+str(int(timestamp))+"_1.csv", 'w') as f:
+            #    writer = csv.writer(f, delimiter='\n')
+            #    writer.writerows(interaction_seq_mem)
 
         
         if event in ['-Noise-']: 
@@ -809,10 +890,9 @@ def main():
                 state += [state_redo_mem]
                 state_redo = []
 
-            print('!!!!!!!!!!!!!!!!', noise_gen[-1].mean())
             noise_gen_np,noise_gen,noise_params,gain,interaction_seq_mem = noise_window(noise_gen_np, noise_gen, noise_params, gain, interaction_seq_mem)
 
-            print('!!!!!!!!!!!!!!!!', noise_gen[-1].mean())
+            # gain = [float(values["noise_set"]) for g in gain]
 
             img = generate(g_ema, sample_z, mean_latent, noise_gen, a_vals, b_vals, idx_group, act, gain, layers2disable, random_seed)
             img_save = img_post(img)
@@ -825,6 +905,7 @@ def main():
 
             state = add2state([sample_z, magnitude, brush_size], [a_vals, b_vals, a_min, a_max, b_min, b_max, act], gain, noise_gen_np,
                                noise_gen, noise_params, layers2disable, random_seed, idx_group, layers_group, state)
+            state_total += [copy.deepcopy(state[-1])]
         
     window.close()
 

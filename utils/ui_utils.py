@@ -26,7 +26,7 @@ def calc_polygon(sample_np, sample_persistant, magnitude=1):
 def draw_poly(polygon, window):
     polygon = copy.deepcopy(polygon)
     array_walk = np.zeros((200,200,3), dtype = np.uint8)
-    array_walk = cv2.polylines(array_walk, [polygon], True, (255, 255, 255), 1)
+    array_walk = cv2.polylines(array_walk, [polygon], True, (211, 211, 211), 1)
     data_walk = array_to_data(array_walk)
     window["walk_graph"].draw_image(data=data_walk, location=(0, 200))
     return window
@@ -68,6 +68,33 @@ def draw_graph(window, layers_group, layers_act, node_pos, layers2disable, array
     return window
 
 def visibility_logic(window, mode):
+    # window['-CANVAS-'].update(visible=mode)
+    # window['-PLOT-'].update(visible=mode)
+
+    # window['relu'].update(visible=mode)
+    # window['sin'].update(visible=mode)
+    # window['cos'].update(visible=mode)
+    # window['re'].update(visible=mode)
+    # window['shi'].update(visible=mode)
+
+    window['ab_graph'].update(visible=mode)
+    window['graph_control'].update(visible=mode)
+    window['-RESET-'].update(visible=mode)
+    window['x_text'].update(visible=mode)
+    window['y_text'].update(visible=mode)
+
+    return window
+
+def visibility_logic2(window, mode):
+    window['-CANVAS-'].update(visible=mode)
+    window['-PLOT-'].update(visible=mode)
+
+    window['relu'].update(visible=mode)
+    window['sin'].update(visible=mode)
+    window['cos'].update(visible=mode)
+    window['re'].update(visible=mode)
+    window['shi'].update(visible=mode)
+
     window['ab_graph'].update(visible=mode)
     window['graph_control'].update(visible=mode)
     window['-RESET-'].update(visible=mode)
@@ -85,13 +112,20 @@ def draw_figure(canvas, figure):
 
 
 
-def update_viz(a, b, window, plot, fig, update_plot):
+def update_viz(a, b, window, plot, fig, update_plot, block=False):
     x, y = update_plot(a, b)
     plot.set_xdata(x)
     plot.set_ydata(y)
 
+    # ax = fig.get_axes()[0]
+    # if block:
+    #     ax_text = ax.text(0.1, 1.5, "DISABLED", backgroundcolor='#e5e5e5', ha="center", va="center", zorder=10, color='#1B1B1B', fontsize='xx-large', fontweight='bold')
+    # elif ax_text!=None:
+    #     ax_text.set_text("")
+
     fig.canvas.draw()
     fig.canvas.flush_events()
+
     # time.sleep(0.1)
     
     return window, plot, fig

@@ -34,7 +34,7 @@ def update_plot_ren(a, b):
     ys = np.zeros(1000)
     for i, x in enumerate(xs):
         t = max(0.0, x)
-        ys[i] = min(t, 1 * a)
+        ys[i] = min(t, 1 * (a+1))
         
     return xs, ys
 
@@ -42,7 +42,7 @@ def update_plot_shi(a, b):
     xs = np.linspace(-5, 5, num=1000)
     ys = np.zeros(1000)
     for i, x in enumerate(xs):
-        ys[i] = a * np.maximum(x, 0)# + b
+        ys[i] = a * np.maximum(x, 0) + b
         
     return xs, ys
 

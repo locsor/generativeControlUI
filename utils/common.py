@@ -16,6 +16,8 @@ def array_to_data(array):
 def add2state(sample_etc, act_etc, gain, noise_gen_np, noise_gen, noise_params, layers2disable, random_seed, idxs, layers, state):
     state += [[copy.deepcopy(sample_etc), copy.deepcopy(act_etc), copy.deepcopy(gain), copy.deepcopy(noise_gen_np),
                copy.deepcopy(noise_gen), copy.deepcopy(noise_params), copy.deepcopy(layers2disable), random_seed, copy.deepcopy(idxs), copy.deepcopy(layers)]]
+    if len(state) > 75:
+        state = state[1:]
     return state
 
 def img_post(img):
