@@ -4,6 +4,7 @@ import copy
 import cv2
 from io import BytesIO
 from PIL import Image
+import time
 
 def array_to_data(array):
     im = Image.fromarray(array)
@@ -28,8 +29,9 @@ def img_post(img):
     return img
 
 def img_post_save(img, name):
+    timestamp = time.time()
     img = torch.clamp(img, min=-1, max=1)
     img = img * 0.5 + 0.5
     img = np.uint8(img[0].cpu().numpy().transpose(1, 2, 0) * 255)
     img = cv2.resize(img, (512,512))
-    cv2.imwrite('./output/' + str(name) + '.png', img[:,:,::-1])
+    cv2.imwrite('./output/' + str(int(timestamp)) + '.png', img[:,:,::-1])

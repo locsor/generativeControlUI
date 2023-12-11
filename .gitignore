@@ -7,7 +7,7 @@ __pycache__/
 *.so
 
 raw/
-*.png
+output/
 
 weights/
 *.pt
