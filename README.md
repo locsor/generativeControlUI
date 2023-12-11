@@ -20,6 +20,6 @@ Tested with Cuda 11.0 and PyTorch 1.7.1
 4. Output image visualizer, button to enter the noise editor, buttons to reset activation functions, random seed input field. 
 
 Examples:
-<img src="[https://your-image-url.type](https://github.com/locsor/generativeControlUI/blob/master/images/out1.png?raw=true)" width="50%" height="50%">
-<img src="[https://your-image-url.type](https://github.com/locsor/generativeControlUI/blob/master/images/out3.png?raw=true)" width="50%" height="50%">
-<img src="[https://your-image-url.type](https://github.com/locsor/generativeControlUI/blob/master/images/out4.png?raw=true)" width="50%" height="50%">
+<img src="https://github.com/locsor/generativeControlUI/blob/master/images/out1.png" width="50%" height="50%">
+<img src="https://github.com/locsor/generativeControlUI/blob/master/images/out3.png" width="50%" height="50%">
+<img src="https://github.com/locsor/generativeControlUI/blob/master/images/out4.png" width="50%" height="50%">
