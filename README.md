@@ -1,6 +1,6 @@
 GUI for StyleGAN2
 
-Demo: [![IMAGE ALT TEXT HERE](https://img.youtube.com/vi/qkP9DHLicwM/0.jpg)](https://www.youtube.com/watch?v=qkP9DHLicwM)
+Demo: [![Demo](https://i9.ytimg.com/vi_webp/qkP9DHLicwM/mq3.webp?sqp=CKCp4asG-oaymwEmCMACELQB8quKqQMa8AEB-AHuCYAC0AWKAgwIABABGFMgXChlMA8=&rs=AOn4CLAlXc50j2ljHve7JYp11cLGYZCsjw)](https://www.youtube.com/watch?v=qkP9DHLicwM)
 
 Currently only compatible with StyleGAN 2 models with following charactersitcs:
 - 1024x1024x3 output
