@@ -1,5 +1,7 @@
 GUI for StyleGAN2
 
+Demo: [![IMAGE ALT TEXT HERE](https://img.youtube.com/vi/YOUTUBE_VIDEO_ID_HERE/0.jpg)](https://www.youtube.com/watch?v=qkP9DHLicwM)
+
 Currently only compatible with StyleGAN 2 models with following charactersitcs:
 - 1024x1024x3 output
 - 8 layer MLP
