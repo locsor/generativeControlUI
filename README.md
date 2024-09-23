@@ -12,7 +12,7 @@ Link to model checkpoint: https://drive.google.com/file/d/1I6TI91GZKbho5Uy7XffCQ
 1. Set weight file path in ./config/defaults.py file
 2. Run ui.py file
 
-Tested with Cuda 11.0 and PyTorch 1.7.1
+Tested with Cuda 11.0, PyTorch 1.7.1, and Python 3.9.
 
 ![alt text](https://github.com/locsor/generativeControlUI/blob/master/images/17_1_line.png?raw=true)
 
