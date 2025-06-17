@@ -1,4 +1,4 @@
-GUI for StyleGAN2
+<h1>GUI for StyleGAN2</h1>
 
 Demo: https://www.youtube.com/watch?v=qkP9DHLicwM
 
@@ -21,7 +21,7 @@ Tested with Cuda 11.0, PyTorch 1.7.1, and Python 3.9.
 3. Interface for a traversing model's latent space.
 4. Output image visualizer, button to enter the noise editor, buttons to reset activation functions, random seed input field. 
 
-Examples:
+<h2>Examples:</h2>
 
 <img src="https://github.com/locsor/generativeControlUI/blob/master/images/out1.png" width="50%" height="50%">
 <img src="https://github.com/locsor/generativeControlUI/blob/master/images/out3.png" width="50%" height="50%">
