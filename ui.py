@@ -13,7 +13,7 @@ def generate(g_ema, sample_z, mean_latent, noise, a, b, idxs, act, gain, dis, ra
     
         global name_it
         name_it += 1
-        img_post_save(sample, name_it)
+        # img_post_save(sample, name_it)
         return sample
 
 
@@ -866,13 +866,13 @@ def main():
             timestamp = time.time()
             img = generate(g_ema, sample_z, mean_latent, noise_gen, a_vals, b_vals, idx_group, act, gain, layers2disable, random_seed)
             img_out = img_post(img)[...,::-1]
-            cv2.imwrite('./outputICCC/' + str(int(timestamp)) + '.png', img_out)
+            cv2.imwrite('./output/' + str(int(timestamp)) + '.png', img_out)
             # torch.save(noise_gen, './raw/noise/'+str(int(timestamp))+'.pt')
             # interaction_seq = [a_vals, b_vals, act, gain, [random_seed], [int(timestamp)]]
 
-            with open("./output/"+str(int(timestamp))+".csv", 'w') as f:
-               writer = csv.writer(f)
-               writer.writerows(state_total)
+            # with open("./output/"+str(int(timestamp))+".csv", 'w') as f:
+               # writer = csv.writer(f)
+               # writer.writerows(state_total)
 
             state_total = []
             # with open("./raw/raw/"+str(int(timestamp))+"_1.csv", 'w') as f:
