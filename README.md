@@ -26,7 +26,9 @@ Examples:
 <img src="https://github.com/locsor/generativeControlUI/blob/master/images/out1.png" width="50%" height="50%">
 <img src="https://github.com/locsor/generativeControlUI/blob/master/images/out3.png" width="50%" height="50%">
 <img src="https://github.com/locsor/generativeControlUI/blob/master/images/out4.png" width="50%" height="50%">
+
 ![Gif1](https://github.com/locsor/generativeControlUI/blob/master/images/gif_1.gif)
+
 ![Gif2](https://github.com/locsor/generativeControlUI/blob/master/images/gif_2.gif)
 
 
