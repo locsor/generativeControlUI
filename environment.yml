@@ -1,4 +1,4 @@
-name: control_new
+name: stylegan2_control_ui
 channels:
   - conda-forge
   - defaults
