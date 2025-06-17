@@ -10,6 +10,7 @@ Currently only compatible with StyleGAN 2 models with following charactersitcs:
 Link to the model checkpoint: https://drive.google.com/file/d/1I6TI91GZKbho5Uy7XffCQLwAK1v-rUvD/view?usp=sharing
 
 <h3>Instructions</h3>
+
 1. Set weight file path in ./config/defaults.py file
 2. Run ui.py file
 
