@@ -20,17 +20,6 @@ def no_weight_gradients():
 
 
 def conv2d(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1):
-    if could_use_op(input):
-        return conv2d_gradfix(
-            transpose=False,
-            weight_shape=weight.shape,
-            stride=stride,
-            padding=padding,
-            output_padding=0,
-            dilation=dilation,
-            groups=groups,
-        ).apply(input, weight, bias)
-
     return F.conv2d(
         input=input,
         weight=weight,
@@ -52,17 +41,6 @@ def conv_transpose2d(
     groups=1,
     dilation=1,
 ):
-    if could_use_op(input):
-        return conv2d_gradfix(
-            transpose=True,
-            weight_shape=weight.shape,
-            stride=stride,
-            padding=padding,
-            output_padding=output_padding,
-            groups=groups,
-            dilation=dilation,
-        ).apply(input, weight, bias)
-
     return F.conv_transpose2d(
         input=input,
         weight=weight,

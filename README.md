@@ -14,7 +14,7 @@ Link to model checkpoint: https://drive.google.com/file/d/1I6TI91GZKbho5Uy7XffCQ
 
 Tested with Cuda 11.0, PyTorch 1.7.1, and Python 3.9.
 
-![alt text](https://github.com/locsor/generativeControlUI/blob/master/images/17_1_line.png?raw=true)
+![UI Image](https://github.com/locsor/generativeControlUI/blob/master/images/UI.png?raw=true)
 
 1. Neural Network architecture visualizer (a).<br>Buttons for enabling/disabling layers (b).
 2. Activation functions selector and visualizer (a).<br>Interface to control trainable activation functions (b).
@@ -26,3 +26,7 @@ Examples:
 <img src="https://github.com/locsor/generativeControlUI/blob/master/images/out1.png" width="50%" height="50%">
 <img src="https://github.com/locsor/generativeControlUI/blob/master/images/out3.png" width="50%" height="50%">
 <img src="https://github.com/locsor/generativeControlUI/blob/master/images/out4.png" width="50%" height="50%">
+![Gif 1]("https://github.com/locsor/generativeControlUI/blob/master/images/gif_1.gif")
+![Gif 2]("https://github.com/locsor/generativeControlUI/blob/master/images/gif_2.gif")
+
+

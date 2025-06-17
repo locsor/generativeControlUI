@@ -42,6 +42,7 @@ def update_plot_shi(a, b):
     xs = np.linspace(-5, 5, num=1000)
     ys = np.zeros(1000)
     for i, x in enumerate(xs):
+        # ys[i] =  a*x**3 + b*x**2 + 0.5*x
         ys[i] = a * np.maximum(x, 0) + b
         
     return xs, ys

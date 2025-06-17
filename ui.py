@@ -86,7 +86,7 @@ def main():
     #               'StyledConv14', 'ToRGB7', 'StyledConv15', 'StyledConv16', 'ToRGB8']
     # im = Image.open("model_image.png")
     # im = #Image.open("model_io.drawio.png")
-    graph_image = cv2.imread("model_image.png", 0) #np.array(im, dtype=np.uint8)
+    graph_image = cv2.imread("./graph/model_image.png", 0) #np.array(im, dtype=np.uint8)
     graph_image = 255-graph_image
     graph_image[graph_image==0] = 27
     graph_image = cv2.resize(graph_image, (750,901))
@@ -866,7 +866,7 @@ def main():
             timestamp = time.time()
             img = generate(g_ema, sample_z, mean_latent, noise_gen, a_vals, b_vals, idx_group, act, gain, layers2disable, random_seed)
             img_out = img_post(img)[...,::-1]
-            cv2.imwrite('./output/' + str(int(timestamp)) + '.png', img_out)
+            cv2.imwrite('./outputICCC/' + str(int(timestamp)) + '.png', img_out)
             # torch.save(noise_gen, './raw/noise/'+str(int(timestamp))+'.pt')
             # interaction_seq = [a_vals, b_vals, act, gain, [random_seed], [int(timestamp)]]
 

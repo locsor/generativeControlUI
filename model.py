@@ -19,6 +19,12 @@ class SinLU(nn.Module):
         return torch.sigmoid(x)*(x+self.a*torch.sin(self.b*x))
 
 def sinFunc(x, a, b):
+    #1012
+    #-.25 .25 -.3 0.5 -0.4 1.0 -.5 1.5
+    #.5 .25 .5 .75 .5 1.5 .5 3.0
+    # a = 0.5
+    
+    # b = 3.0
     a = torch.ones(1).cuda() * a
     b = torch.ones(1).cuda() * b
     return torch.sigmoid(x)*(x+a*torch.sin(b*x))
@@ -36,6 +42,20 @@ def reLUNfunc(x, n):
 
 def shiFunc(x, a, b):
     return a * F.relu(x) + b
+    # a = 0.5
+    # b = 1.2
+    # c = 0
+    # return a*x**3 + b*x**2 + c*x
+
+import math
+
+def poly(x, a, b, c):
+    # a = 0.5
+    # b = 0.5
+    # c = 0.5
+    x = torch.sigmoid(x)
+    return (a*x**3 + b*x**2 + c*x)/(math.sqrt(2)**3)
+
 
 class mySequential(nn.Sequential):
     def forward(self, *inputs):
@@ -418,6 +438,8 @@ class StyledConv(nn.Module):
             return cosFunc(out, ab[0][ct], ab[1][ct])
         elif act[ct] == 2:
             return reLUNfunc(out, ab[0][ct])
+        # elif act[ct] == 3:
+            # out = poly(out, 2, 2, 2)
         elif act[ct] == 3:
             return shiFunc(out, ab[0][ct], ab[1][ct])
 

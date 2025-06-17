@@ -38,6 +38,10 @@ def build(plot_name):
                       sg.Input(size=(5, 5), key='b_max', enable_events=True, default_text='3', background_color=color,text_color='#FFFFFF')],
                      [sg.Button('Set', key = 'set',font=font,button_color=button_color)]]
 
+    # graph_control = [[sg.Slider(range=(-5, 5), default_value=0, expand_x=True, enable_events=True, orientation='horizontal', key='slider1')],
+    #                  [sg.Slider(range=(-5, 5), default_value=0, expand_x=True, enable_events=True, orientation='horizontal', key='slider2')],
+    #                  [sg.Slider(range=(-5, 5), default_value=0, expand_x=True, enable_events=True, orientation='horizontal', key='slider3')]]
+
     walk_control = [
                     [sg.Text('Brush Size: 10', key='brush_size_text', background_color=color, font=font)],
                     [sg.Slider(range=(1, 32), default_value=4, expand_x=True, enable_events=True,
@@ -59,6 +63,15 @@ def build(plot_name):
         [sg.Graph(canvas_size=(200, 200), graph_bottom_left=(0, 0), graph_top_right=(200,200),
                     background_color='red', enable_events=True, drag_submits=True, key='walk_graph'), sg.Column(walk_control, background_color=color, key='graph_control')]
     ]
+    # plot_viewer_column = [
+    #     [sg.Text(plot_name, key='-PLOT-', enable_events=True, background_color=color, font=font)],
+    #     [r0, r1, r2, r3, r4],
+    #     [sg.Text(size=(40, 1), key="-TOUT-", background_color=color, font=font)],
+    #     [sg.Canvas(key='-CANVAS-', background_color=color)],
+    #     [sg.Column(graph_control, background_color=color, key='graph_control')],
+    #     [sg.Graph(canvas_size=(200, 200), graph_bottom_left=(0, 0), graph_top_right=(200,200),
+    #                 background_color='red', enable_events=True, drag_submits=True, key='walk_graph'), sg.Column(walk_control, background_color=color, key='graph_control')]
+    # ]
 
     image_column = [
         [sg.Image('', key='-IMAGE-', background_color=color)],
