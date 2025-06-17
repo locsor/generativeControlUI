@@ -7,12 +7,15 @@ Currently only compatible with StyleGAN 2 models with following charactersitcs:
 - 8 layer MLP
 - 512-dimensional latent vector 
 
-Link to model checkpoint: https://drive.google.com/file/d/1I6TI91GZKbho5Uy7XffCQLwAK1v-rUvD/view?usp=sharing
+Link to the model checkpoint: https://drive.google.com/file/d/1I6TI91GZKbho5Uy7XffCQLwAK1v-rUvD/view?usp=sharing
 
 1. Set weight file path in ./config/defaults.py file
 2. Run ui.py file
 
-Tested with Cuda 11.0, PyTorch 1.7.1, and Python 3.9.
+To install a conda environment run:
+```
+conda env create -f environment.yml
+```
 
 ![UI Image](https://github.com/locsor/generativeControlUI/blob/master/images/UI.png?raw=true)
 
